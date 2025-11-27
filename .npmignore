@@ -1,0 +1,39 @@
+# Source (we ship dist/)
+src/
+
+# Tests
+tests/
+coverage/
+*.test.ts
+
+# Config files
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+.eslintrc.js
+.prettierrc
+
+# CI/CD
+.github/
+
+# Dev docs
+PUBLISH.md
+notes.md
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env*
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Misc
+*.tgz
+tmp/
+temp/

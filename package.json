@@ -1,0 +1,70 @@
+{
+  "name": "mediatwin",
+  "version": "0.1.0",
+  "description": "Media similarity detection using perceptual hashing",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "author": "Mykhailo Buslenko m.buslenko@gmail.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mbuslenko/mediatwin"
+  },
+  "bugs": {
+    "url": "https://github.com/mbuselnko/mediatwin/issues"
+  },
+  "homepage": "https://github.com/mbuslenko/mediatwin#readme",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "image",
+    "video",
+    "similarity",
+    "hash",
+    "phash",
+    "perceptual-hash",
+    "duplicate-detection",
+    "media"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "sharp": "^0.33.0",
+    "ioredis": "^5.3.0",
+    "fluent-ffmpeg": "^2.1.0",
+    "ffmpeg-static": "^5.2.0",
+    "nanoid": "^5.0.0",
+    "file-type": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "tsup": "^8.0.0",
+    "vitest": "^1.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "prettier": "^3.1.0"
+  }
+}
