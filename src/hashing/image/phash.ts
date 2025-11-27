@@ -1,5 +1,5 @@
-import type { MediaSource } from '../../types';
-import { bigIntToHex, computeMedian } from '../../utils/hash-utils';
+import type { HashSize, MediaSource } from '../../types';
+import { bigIntToHex, computeMedian, hashSizeToGridSize, hashSizeToHexLength } from '../../utils/hash-utils';
 import { imageProcessor } from './image-processor';
 import type { HashResult, ImageHasher } from '../types';
 
@@ -7,22 +7,24 @@ import type { HashResult, ImageHasher } from '../types';
  * DCT (Discrete Cosine Transform) based Perceptual Hash
  *
  * Algorithm:
- * 1. Resize image to 32x32 (for 8x8 output)
+ * 1. Resize image to 32x32 (for 64-bit) or 64x64 (for 256-bit)
  * 2. Convert to grayscale
  * 3. Compute 2D DCT
- * 4. Extract top-left 8x8 (low frequencies)
- * 5. Compare values to median to generate 64-bit hash
+ * 4. Extract top-left 8x8 or 16x16 (low frequencies)
+ * 5. Compare values to median to generate hash
  */
 export class PHasher implements ImageHasher {
   readonly name = 'phash';
 
   private readonly size: number;
+  private readonly hashBits: HashSize;
   private readonly dctSize: number;
   private readonly cosTable: number[][];
 
-  constructor(size: number = 8) {
-    this.size = size;
-    this.dctSize = size * 4; // 32x32 for 8x8 output
+  constructor(hashSize: HashSize = 64) {
+    this.hashBits = hashSize;
+    this.size = hashSizeToGridSize(hashSize); // 8 for 64-bit, 16 for 256-bit
+    this.dctSize = this.size * 4; // 32x32 for 64-bit, 64x64 for 256-bit
     this.cosTable = this.precomputeCosineTable();
   }
 
@@ -49,7 +51,7 @@ export class PHasher implements ImageHasher {
     const processingTime = performance.now() - startTime;
 
     return {
-      hash: bigIntToHex(hash, 16),
+      hash: bigIntToHex(hash, hashSizeToHexLength(this.hashBits)),
       processingTime,
     };
   }
@@ -115,8 +117,8 @@ export class PHasher implements ImageHasher {
   }
 }
 
-export async function computePHash(source: MediaSource, size: number = 8): Promise<string> {
-  const hasher = new PHasher(size);
+export async function computePHash(source: MediaSource, hashSize: HashSize = 64): Promise<string> {
+  const hasher = new PHasher(hashSize);
   const result = await hasher.compute(source);
   return result.hash;
 }

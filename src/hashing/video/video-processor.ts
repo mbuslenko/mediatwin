@@ -1,6 +1,8 @@
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
-import { PassThrough } from 'stream';
+import { randomUUID } from 'crypto';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 if (ffmpegStatic) {
   ffmpeg.setFfmpegPath(ffmpegStatic);
@@ -50,24 +52,41 @@ export class VideoProcessor {
   }
 
   async extractFrame(videoPath: string, timestamp: number): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      const passThrough = new PassThrough();
+    const fs = await import('fs/promises');
+    const tempPath = join(tmpdir(), `mediatwin-frame-${randomUUID()}.png`);
 
-      passThrough.on('data', (chunk: Buffer) => chunks.push(chunk));
-      passThrough.on('end', () => resolve(Buffer.concat(chunks)));
-      passThrough.on('error', reject);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(videoPath)
+          .seekInput(timestamp)
+          .frames(1)
+          .output(tempPath)
+          .outputOptions(['-vcodec', 'png'])
+          .on('end', () => resolve())
+          .on('error', (err) => {
+            reject(new Error(`FFmpeg error: ${err.message}`));
+          })
+          .run();
+      });
 
-      ffmpeg(videoPath)
-        .seekInput(timestamp)
-        .frames(1)
-        .format('image2pipe')
-        .outputOptions(['-vcodec', 'png', '-f', 'image2pipe'])
-        .on('error', (err) => {
-          reject(new Error(`Failed to extract frame: ${err.message}`));
-        })
-        .pipe(passThrough, { end: true });
-    });
+      try {
+        await fs.access(tempPath);
+      } catch {
+        throw new Error(`Frame not created at timestamp ${timestamp}s`);
+      }
+
+      const buffer = await fs.readFile(tempPath);
+
+      if (buffer.length === 0) {
+        throw new Error(`Empty frame at timestamp ${timestamp}s`);
+      }
+
+      await fs.unlink(tempPath).catch(() => {});
+      return buffer;
+    } catch (err) {
+      await fs.unlink(tempPath).catch(() => {});
+      throw err;
+    }
   }
 
   async extractFrames(
@@ -81,8 +100,9 @@ export class VideoProcessor {
       try {
         const frame = await this.extractFrame(videoPath, timestamp);
         frames.set(timestamp, frame);
-      } catch (err) {
-        console.warn(`Failed to extract frame at ${timestamp}s: ${err}`);
+      } catch {
+        // Frame extraction can fail for timestamps beyond video duration
+        // This is expected and not logged to avoid noise
       }
     }
 

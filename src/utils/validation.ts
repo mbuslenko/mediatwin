@@ -48,8 +48,8 @@ export function validateSearchInput(input: SearchInput): void {
     throw new ValidationError('Threshold must be a number');
   }
 
-  if (input.threshold < 0 || input.threshold > 64) {
-    throw new ValidationError('Threshold must be between 0 and 64');
+  if (input.threshold < 0 || input.threshold > 256) {
+    throw new ValidationError('Threshold must be between 0 and 256');
   }
 
   if (input.hashAlgorithm !== undefined && !VALID_HASH_ALGORITHMS.includes(input.hashAlgorithm)) {

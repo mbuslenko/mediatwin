@@ -1,4 +1,4 @@
-import type { HashAlgorithm, HashWeights } from '../types/config';
+import type { HashAlgorithm, HashSize, HashWeights } from '../types/config';
 import type { ComputedHashes } from '../types/media';
 import type { SearchResult } from '../types/results';
 import { hammingDistance, distanceToSimilarity } from '../utils/hash-utils';
@@ -12,9 +12,11 @@ import type { SearchOptions, ScoredCandidate } from './types';
 export class SimilarityEngine {
   private bkTrees: Map<HashAlgorithm, BKTree> = new Map();
   private storage: StorageAdapter;
+  private hashSize: HashSize;
 
-  constructor(storage: StorageAdapter) {
+  constructor(storage: StorageAdapter, hashSize: HashSize = 64) {
     this.storage = storage;
+    this.hashSize = hashSize;
   }
 
   /**
@@ -154,7 +156,7 @@ export class SimilarityEngine {
         entry,
         primaryDistance: candidate.distance,
         weightedScore,
-        similarity: distanceToSimilarity(candidate.distance),
+        similarity: distanceToSimilarity(candidate.distance, this.hashSize),
       });
     }
 
@@ -187,7 +189,7 @@ export class SimilarityEngine {
     if (!weights) {
       // Use first available distance
       const firstDistance = Object.values(distances)[0];
-      return firstDistance !== undefined ? distanceToSimilarity(firstDistance) : 0;
+      return firstDistance !== undefined ? distanceToSimilarity(firstDistance, this.hashSize) : 0;
     }
 
     let totalScore = 0;
@@ -196,7 +198,7 @@ export class SimilarityEngine {
     for (const [algo, weight] of Object.entries(weights) as [HashAlgorithm, number][]) {
       const distance = distances[algo];
       if (weight && distance !== undefined) {
-        const similarity = distanceToSimilarity(distance);
+        const similarity = distanceToSimilarity(distance, this.hashSize);
         totalScore += similarity * weight;
         totalWeight += weight;
       }

@@ -1,5 +1,7 @@
 export type HashAlgorithm = 'phash' | 'dhash' | 'ahash' | 'colorHash';
 
+export type HashSize = 64 | 256;
+
 export interface VideoOptions {
   /** Seconds between frame extractions (default: 1) */
   frameInterval?: number;
@@ -13,6 +15,8 @@ export interface MediaTwinConfig {
   /** Redis key namespace prefix */
   namespace?: string;
   hashAlgorithms?: HashAlgorithm[];
+  /** Hash size in bits: 64 (default) or 256 for higher accuracy */
+  hashSize?: HashSize;
   videoOptions?: VideoOptions;
 }
 

@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import type {
   MediaTwinConfig,
   HashAlgorithm,
+  HashSize,
   VideoOptions,
 } from './types/config';
 import type { MediaInput, SearchInput, MediaEntry, ComputedHashes } from './types/media';
@@ -37,7 +38,7 @@ import { SimilarityEngine } from './search/similarity-engine';
  * ```
  */
 export class MediaTwin {
-  private config: Required<MediaTwinConfig> & { videoOptions: Required<VideoOptions> };
+  private config: Required<MediaTwinConfig> & { videoOptions: Required<VideoOptions>; hashSize: HashSize };
   private storage: StorageAdapter;
   private searchEngine: SimilarityEngine;
   private connected = false;
@@ -46,6 +47,8 @@ export class MediaTwin {
   private frameSampler: FrameSampler | null = null;
   private vHasher: VHasher | null = null;
 
+  public redis!: import('ioredis').default;
+
   constructor(config: MediaTwinConfig) {
     validateRedisConnection(config.redis);
 
@@ -53,6 +56,7 @@ export class MediaTwin {
       redis: config.redis,
       namespace: config.namespace || 'default',
       hashAlgorithms: config.hashAlgorithms || ['phash'],
+      hashSize: config.hashSize || 64,
       videoOptions: {
         frameInterval: config.videoOptions?.frameInterval ?? 1,
         maxFrames: config.videoOptions?.maxFrames ?? 60,
@@ -64,26 +68,29 @@ export class MediaTwin {
       namespace: this.config.namespace,
     });
 
-    this.searchEngine = new SimilarityEngine(this.storage);
+    this.searchEngine = new SimilarityEngine(this.storage, this.config.hashSize);
+
+    const hashSize = this.config.hashSize;
 
     this.imageHashers = new Map();
     if (this.config.hashAlgorithms.includes('phash')) {
-      this.imageHashers.set('phash', new PHasher());
+      this.imageHashers.set('phash', new PHasher(hashSize));
     }
     if (this.config.hashAlgorithms.includes('dhash')) {
-      this.imageHashers.set('dhash', new DHasher());
+      this.imageHashers.set('dhash', new DHasher(hashSize));
     }
     if (this.config.hashAlgorithms.includes('ahash')) {
-      this.imageHashers.set('ahash', new AHasher());
+      this.imageHashers.set('ahash', new AHasher(hashSize));
     }
     if (this.config.hashAlgorithms.includes('colorHash')) {
-      this.imageHashers.set('colorHash', new ColorHasher());
+      this.imageHashers.set('colorHash', new ColorHasher(hashSize));
     }
 
     this.frameSampler = new FrameSampler({
       interval: this.config.videoOptions.frameInterval,
       maxFrames: this.config.videoOptions.maxFrames,
       hashAlgorithms: this.config.hashAlgorithms,
+      hashSize: this.config.hashSize,
     });
 
     if (this.config.videoOptions.enableVHash) {
@@ -99,6 +106,7 @@ export class MediaTwin {
 
     await this.storage.connect();
     await this.searchEngine.initialize(this.config.hashAlgorithms);
+    this.redis = (this.storage as RedisStorageAdapter).getClient()!;
     this.connected = true;
   }
 

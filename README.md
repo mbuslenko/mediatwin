@@ -10,6 +10,8 @@ Built for cases where you need to compare against hundreds of thousands of files
 npm install mediatwin
 ```
 
+This is an ESM-only package. Your project needs `"type": "module"` in package.json (or use `.mjs` files).
+
 You'll also need Redis running somewhere. The package handles everything else.
 
 ## Quick Start
@@ -48,10 +50,10 @@ When you search, it doesn't compare your query against every single file. Instea
 
 **What's the threshold?** It's the maximum Hamming distance (number of different bits) between two hashes. Lower = stricter matching.
 
-- `0-5`: Nearly identical (resized, slightly compressed)
-- `5-10`: Very similar (minor edits, watermarks)
-- `10-15`: Somewhat similar (crops, color adjustments)
-- `15+`: Increasingly different
+For **64-bit hashes** (default)
+For **256-bit hashes** (`hashSize: 256`), multiply thresholds by ~4
+
+256-bit hashes capture more detail and reduce false positives, but require more time and RAM.
 
 ## Configuration
 
@@ -63,6 +65,7 @@ const mt = new MediaTwin({
   // Optional
   namespace: 'myapp',              // Key prefix in Redis (default: 'default')
   hashAlgorithms: ['phash', 'dhash'], // Which hashes to compute (default: ['phash'])
+  hashSize: 256,                   // Hash size: 64 (default) or 256 for higher accuracy
 
   videoOptions: {
     frameInterval: 2,              // Extract frame every N seconds (default: 1)

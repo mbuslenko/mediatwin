@@ -1,4 +1,4 @@
-import type { HashAlgorithm } from '../../types/config';
+import type { HashAlgorithm, HashSize } from '../../types/config';
 import type { ComputedHashes, FrameHash } from '../../types/media';
 import { PHasher } from '../image/phash';
 import { DHasher } from '../image/dhash';
@@ -13,6 +13,8 @@ export interface FrameSamplerOptions {
   maxFrames: number;
   /** Hash algorithms to use */
   hashAlgorithms: HashAlgorithm[];
+  /** Hash size in bits (64 or 256) */
+  hashSize?: HashSize;
 }
 
 /**
@@ -24,20 +26,21 @@ export class FrameSampler {
 
   constructor(options: FrameSamplerOptions) {
     this.options = options;
+    const hashSize = options.hashSize || 64;
 
     this.hashers = new Map();
 
     if (options.hashAlgorithms.includes('phash')) {
-      this.hashers.set('phash', new PHasher());
+      this.hashers.set('phash', new PHasher(hashSize));
     }
     if (options.hashAlgorithms.includes('dhash')) {
-      this.hashers.set('dhash', new DHasher());
+      this.hashers.set('dhash', new DHasher(hashSize));
     }
     if (options.hashAlgorithms.includes('ahash')) {
-      this.hashers.set('ahash', new AHasher());
+      this.hashers.set('ahash', new AHasher(hashSize));
     }
     if (options.hashAlgorithms.includes('colorHash')) {
-      this.hashers.set('colorHash', new ColorHasher());
+      this.hashers.set('colorHash', new ColorHasher(hashSize));
     }
   }
 

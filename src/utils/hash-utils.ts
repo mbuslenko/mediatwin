@@ -1,5 +1,27 @@
+import type { HashSize } from '../types';
+
 export function hexToBigInt(hex: string): bigint {
   return BigInt('0x' + hex);
+}
+
+/**
+ * Convert hash size in bits to grid dimension
+ * 64 bits = 8x8 grid, 256 bits = 16x16 grid
+ */
+export function hashSizeToGridSize(hashSize: HashSize): number {
+  return hashSize === 256 ? 16 : 8;
+}
+
+/**
+ * Convert hash size in bits to hex string length
+ * 64 bits = 16 hex chars, 256 bits = 64 hex chars
+ */
+export function hashSizeToHexLength(hashSize: HashSize): number {
+  return hashSize === 256 ? 64 : 16;
+}
+
+export function detectHashSize(hashHex: string): HashSize {
+  return hashHex.length > 16 ? 256 : 64;
 }
 
 export function bigIntToHex(value: bigint, padLength: number = 16): string {

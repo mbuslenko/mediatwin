@@ -1,5 +1,5 @@
-import type { MediaSource } from '../../types';
-import { bigIntToHex } from '../../utils/hash-utils';
+import type { HashSize, MediaSource } from '../../types';
+import { bigIntToHex, hashSizeToGridSize, hashSizeToHexLength } from '../../utils/hash-utils';
 import { imageProcessor } from './image-processor';
 import type { HashResult, ImageHasher } from '../types';
 
@@ -7,20 +7,22 @@ import type { HashResult, ImageHasher } from '../types';
  * Difference Hash (Gradient-based)
  *
  * Algorithm:
- * 1. Resize image to (size+1) x size (e.g., 9x8)
+ * 1. Resize image to (size+1) x size (e.g., 9x8 for 64-bit, 17x16 for 256-bit)
  * 2. Convert to grayscale
  * 3. Compare adjacent horizontal pixels
  * 4. Generate hash: 1 if left > right, 0 otherwise
  *
- * This produces a 64-bit hash for 8x8 size.
+ * This produces a 64-bit hash for 8x8 size, or 256-bit for 16x16.
  */
 export class DHasher implements ImageHasher {
   readonly name = 'dhash';
 
   private readonly size: number;
+  private readonly hashBits: HashSize;
 
-  constructor(size: number = 8) {
-    this.size = size;
+  constructor(hashSize: HashSize = 64) {
+    this.hashBits = hashSize;
+    this.size = hashSizeToGridSize(hashSize);
   }
 
   async compute(source: MediaSource): Promise<HashResult> {
@@ -52,14 +54,14 @@ export class DHasher implements ImageHasher {
     const processingTime = performance.now() - startTime;
 
     return {
-      hash: bigIntToHex(hash, 16),
+      hash: bigIntToHex(hash, hashSizeToHexLength(this.hashBits)),
       processingTime,
     };
   }
 }
 
-export async function computeDHash(source: MediaSource, size: number = 8): Promise<string> {
-  const hasher = new DHasher(size);
+export async function computeDHash(source: MediaSource, hashSize: HashSize = 64): Promise<string> {
+  const hasher = new DHasher(hashSize);
   const result = await hasher.compute(source);
   return result.hash;
 }
