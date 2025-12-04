@@ -1,4 +1,4 @@
-import type { HashSize, MediaSource } from '../../types';
+import type { AspectRatioMode, HashSize, MediaSource } from '../../types';
 import { bigIntToHex, computeMedian, hashSizeToGridSize, hashSizeToHexLength } from '../../utils/hash-utils';
 import { imageProcessor } from './image-processor';
 import type { HashResult, ImageHasher } from '../types';
@@ -20,18 +20,20 @@ export class PHasher implements ImageHasher {
   private readonly hashBits: HashSize;
   private readonly dctSize: number;
   private readonly cosTable: number[][];
+  private readonly aspectRatioMode: AspectRatioMode;
 
-  constructor(hashSize: HashSize = 64) {
+  constructor(hashSize: HashSize = 64, aspectRatioMode: AspectRatioMode = 'stretch') {
     this.hashBits = hashSize;
-    this.size = hashSizeToGridSize(hashSize); // 8 for 64-bit, 16 for 256-bit
-    this.dctSize = this.size * 4; // 32x32 for 64-bit, 64x64 for 256-bit
+    this.size = hashSizeToGridSize(hashSize);
+    this.dctSize = this.size * 4;
     this.cosTable = this.precomputeCosineTable();
+    this.aspectRatioMode = aspectRatioMode;
   }
 
   async compute(source: MediaSource): Promise<HashResult> {
     const startTime = performance.now();
 
-    const pixels = await imageProcessor.getGrayscalePixels(source, this.dctSize);
+    const pixels = await imageProcessor.getGrayscalePixels(source, this.dctSize, this.aspectRatioMode);
     const dct = this.compute2DDCT(pixels);
 
     // extract low frequency components (top-left size x size)
@@ -117,8 +119,12 @@ export class PHasher implements ImageHasher {
   }
 }
 
-export async function computePHash(source: MediaSource, hashSize: HashSize = 64): Promise<string> {
-  const hasher = new PHasher(hashSize);
+export async function computePHash(
+  source: MediaSource,
+  hashSize: HashSize = 64,
+  aspectRatioMode: AspectRatioMode = 'stretch'
+): Promise<string> {
+  const hasher = new PHasher(hashSize, aspectRatioMode);
   const result = await hasher.compute(source);
   return result.hash;
 }

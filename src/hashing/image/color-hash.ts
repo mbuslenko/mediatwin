@@ -1,4 +1,4 @@
-import type { HashSize, MediaSource } from '../../types';
+import type { AspectRatioMode, HashSize, MediaSource } from '../../types';
 import { bigIntToHex, computeMedian, hashSizeToHexLength } from '../../utils/hash-utils';
 import { imageProcessor } from './image-processor';
 import type { HashResult, ImageHasher } from '../types';
@@ -25,10 +25,12 @@ export class ColorHasher implements ImageHasher {
 
   private readonly hashBits: HashSize;
   private readonly binsPerChannel: number;
+  private readonly aspectRatioMode: AspectRatioMode;
 
-  constructor(hashSize: HashSize = 64, binsPerChannel: number = 4) {
+  constructor(hashSize: HashSize = 64, aspectRatioMode: AspectRatioMode = 'stretch', binsPerChannel: number = 4) {
     this.hashBits = hashSize;
     this.binsPerChannel = binsPerChannel;
+    this.aspectRatioMode = aspectRatioMode;
   }
 
   async compute(source: MediaSource): Promise<HashResult> {
@@ -42,7 +44,7 @@ export class ColorHasher implements ImageHasher {
   }
 
   private async compute64bit(source: MediaSource, startTime: number): Promise<HashResult> {
-    const pixels = await imageProcessor.getRgbPixels(source, 8);
+    const pixels = await imageProcessor.getRgbPixels(source, 8, this.aspectRatioMode);
     const hash = this.computeHistogramHash(pixels);
     const processingTime = performance.now() - startTime;
 
@@ -57,6 +59,7 @@ export class ColorHasher implements ImageHasher {
       width: 16,
       height: 16,
       grayscale: false,
+      aspectRatioMode: this.aspectRatioMode,
     });
 
     const pixels = imageData.data;
@@ -125,8 +128,12 @@ export class ColorHasher implements ImageHasher {
   }
 }
 
-export async function computeColorHash(source: MediaSource, hashSize: HashSize = 64): Promise<string> {
-  const hasher = new ColorHasher(hashSize);
+export async function computeColorHash(
+  source: MediaSource,
+  hashSize: HashSize = 64,
+  aspectRatioMode: AspectRatioMode = 'stretch'
+): Promise<string> {
+  const hasher = new ColorHasher(hashSize, aspectRatioMode);
   const result = await hasher.compute(source);
   return result.hash;
 }

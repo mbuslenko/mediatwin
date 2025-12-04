@@ -1,4 +1,4 @@
-import type { HashAlgorithm, HashSize } from '../../types/config';
+import type { AspectRatioMode, HashAlgorithm, HashSize } from '../../types/config';
 import type { ComputedHashes, FrameHash } from '../../types/media';
 import { PHasher } from '../image/phash';
 import { DHasher } from '../image/dhash';
@@ -15,6 +15,8 @@ export interface FrameSamplerOptions {
   hashAlgorithms: HashAlgorithm[];
   /** Hash size in bits (64 or 256) */
   hashSize?: HashSize;
+  /** How to handle aspect ratio when resizing */
+  aspectRatioMode?: AspectRatioMode;
 }
 
 /**
@@ -27,20 +29,21 @@ export class FrameSampler {
   constructor(options: FrameSamplerOptions) {
     this.options = options;
     const hashSize = options.hashSize || 64;
+    const aspectRatioMode = options.aspectRatioMode || 'stretch';
 
     this.hashers = new Map();
 
     if (options.hashAlgorithms.includes('phash')) {
-      this.hashers.set('phash', new PHasher(hashSize));
+      this.hashers.set('phash', new PHasher(hashSize, aspectRatioMode));
     }
     if (options.hashAlgorithms.includes('dhash')) {
-      this.hashers.set('dhash', new DHasher(hashSize));
+      this.hashers.set('dhash', new DHasher(hashSize, aspectRatioMode));
     }
     if (options.hashAlgorithms.includes('ahash')) {
-      this.hashers.set('ahash', new AHasher(hashSize));
+      this.hashers.set('ahash', new AHasher(hashSize, aspectRatioMode));
     }
     if (options.hashAlgorithms.includes('colorHash')) {
-      this.hashers.set('colorHash', new ColorHasher(hashSize));
+      this.hashers.set('colorHash', new ColorHasher(hashSize, aspectRatioMode));
     }
   }
 

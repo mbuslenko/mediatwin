@@ -3,6 +3,7 @@ import type {
   MediaTwinConfig,
   HashAlgorithm,
   HashSize,
+  AspectRatioMode,
   VideoOptions,
 } from './types/config';
 import type { MediaInput, SearchInput, MediaEntry, ComputedHashes } from './types/media';
@@ -38,7 +39,7 @@ import { SimilarityEngine } from './search/similarity-engine';
  * ```
  */
 export class MediaTwin {
-  private config: Required<MediaTwinConfig> & { videoOptions: Required<VideoOptions>; hashSize: HashSize };
+  private config: Required<MediaTwinConfig> & { videoOptions: Required<VideoOptions>; hashSize: HashSize; aspectRatioMode: AspectRatioMode };
   private storage: StorageAdapter;
   private searchEngine: SimilarityEngine;
   private connected = false;
@@ -57,6 +58,7 @@ export class MediaTwin {
       namespace: config.namespace || 'default',
       hashAlgorithms: config.hashAlgorithms || ['phash'],
       hashSize: config.hashSize || 64,
+      aspectRatioMode: config.aspectRatioMode || 'stretch',
       videoOptions: {
         frameInterval: config.videoOptions?.frameInterval ?? 1,
         maxFrames: config.videoOptions?.maxFrames ?? 60,
@@ -71,19 +73,20 @@ export class MediaTwin {
     this.searchEngine = new SimilarityEngine(this.storage, this.config.hashSize);
 
     const hashSize = this.config.hashSize;
+    const aspectRatioMode = this.config.aspectRatioMode;
 
     this.imageHashers = new Map();
     if (this.config.hashAlgorithms.includes('phash')) {
-      this.imageHashers.set('phash', new PHasher(hashSize));
+      this.imageHashers.set('phash', new PHasher(hashSize, aspectRatioMode));
     }
     if (this.config.hashAlgorithms.includes('dhash')) {
-      this.imageHashers.set('dhash', new DHasher(hashSize));
+      this.imageHashers.set('dhash', new DHasher(hashSize, aspectRatioMode));
     }
     if (this.config.hashAlgorithms.includes('ahash')) {
-      this.imageHashers.set('ahash', new AHasher(hashSize));
+      this.imageHashers.set('ahash', new AHasher(hashSize, aspectRatioMode));
     }
     if (this.config.hashAlgorithms.includes('colorHash')) {
-      this.imageHashers.set('colorHash', new ColorHasher(hashSize));
+      this.imageHashers.set('colorHash', new ColorHasher(hashSize, aspectRatioMode));
     }
 
     this.frameSampler = new FrameSampler({
@@ -91,6 +94,7 @@ export class MediaTwin {
       maxFrames: this.config.videoOptions.maxFrames,
       hashAlgorithms: this.config.hashAlgorithms,
       hashSize: this.config.hashSize,
+      aspectRatioMode: this.config.aspectRatioMode,
     });
 
     if (this.config.videoOptions.enableVHash) {

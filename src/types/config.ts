@@ -2,6 +2,14 @@ export type HashAlgorithm = 'phash' | 'dhash' | 'ahash' | 'colorHash';
 
 export type HashSize = 64 | 256;
 
+/**
+ * How to handle images with different aspect ratios before hashing:
+ * - `stretch`: Stretch/compress to fit target size (fast, but aspect ratio sensitive)
+ * - `crop`: Center crop to square before resizing (good for centered content)
+ * - `pad`: Fit within target maintaining aspect ratio, pad with average color (preserves all content)
+ */
+export type AspectRatioMode = 'stretch' | 'crop' | 'pad';
+
 export interface VideoOptions {
   /** Seconds between frame extractions (default: 1) */
   frameInterval?: number;
@@ -17,6 +25,8 @@ export interface MediaTwinConfig {
   hashAlgorithms?: HashAlgorithm[];
   /** Hash size in bits: 64 (default) or 256 for higher accuracy */
   hashSize?: HashSize;
+  /** How to handle different aspect ratios: 'stretch' (default), 'crop', or 'pad' */
+  aspectRatioMode?: AspectRatioMode;
   videoOptions?: VideoOptions;
 }
 

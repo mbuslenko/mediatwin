@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import type { MediaSource } from '../../types';
+import type { AspectRatioMode, MediaSource } from '../../types';
 import { sourceToBuffer } from '../../utils/file-utils';
 import type { ImageData } from '../types';
 
@@ -10,6 +10,8 @@ export interface ProcessOptions {
   height: number;
   /** Convert to grayscale (default: true) */
   grayscale?: boolean;
+  /** Aspect ratio handling mode (default: 'stretch') */
+  aspectRatioMode?: AspectRatioMode;
 }
 
 /**
@@ -18,11 +20,34 @@ export interface ProcessOptions {
 export class ImageProcessor {
   async process(source: MediaSource, options: ProcessOptions): Promise<ImageData> {
     const buffer = await sourceToBuffer(source);
+    const mode = options.aspectRatioMode || 'stretch';
 
-    let pipeline = sharp(buffer).resize(options.width, options.height, {
-      fit: 'fill',
-      kernel: 'lanczos3',
-    });
+    let pipeline: sharp.Sharp;
+
+    if (mode === 'stretch') {
+      pipeline = sharp(buffer).resize(options.width, options.height, {
+        fit: 'fill',
+        kernel: 'lanczos3',
+      });
+    } else if (mode === 'crop') {
+      pipeline = sharp(buffer).resize(options.width, options.height, {
+        fit: 'cover',
+        position: 'center',
+        kernel: 'lanczos3',
+      });
+    } else {
+      const { dominant } = await sharp(buffer).stats();
+
+      pipeline = sharp(buffer).resize(options.width, options.height, {
+        fit: 'contain',
+        kernel: 'lanczos3',
+        background: {
+          r: dominant.r,
+          g: dominant.g,
+          b: dominant.b,
+        },
+      });
+    }
 
     if (options.grayscale !== false) {
       pipeline = pipeline.grayscale();
@@ -38,11 +63,16 @@ export class ImageProcessor {
     };
   }
 
-  async getGrayscalePixels(source: MediaSource, size: number): Promise<number[]> {
+  async getGrayscalePixels(
+    source: MediaSource,
+    size: number,
+    aspectRatioMode?: AspectRatioMode
+  ): Promise<number[]> {
     const imageData = await this.process(source, {
       width: size,
       height: size,
       grayscale: true,
+      aspectRatioMode,
     });
 
     return Array.from(imageData.data);
@@ -51,16 +81,28 @@ export class ImageProcessor {
   /**
    * Get RGB pixel values as a flat array [r,g,b,r,g,b,...]
    */
-  async getRgbPixels(source: MediaSource, size: number): Promise<number[]> {
-    const buffer = await sourceToBuffer(source);
+  async getRgbPixels(
+    source: MediaSource,
+    size: number,
+    aspectRatioMode?: AspectRatioMode
+  ): Promise<number[]> {
+    const imageData = await this.process(source, {
+      width: size,
+      height: size,
+      grayscale: false,
+      aspectRatioMode,
+    });
 
-    const { data } = await sharp(buffer)
-      .resize(size, size, { fit: 'fill', kernel: 'lanczos3' })
-      .removeAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
+    // Remove alpha if present
+    if (imageData.channels === 4) {
+      const rgb: number[] = [];
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        rgb.push(imageData.data[i], imageData.data[i + 1], imageData.data[i + 2]);
+      }
+      return rgb;
+    }
 
-    return Array.from(data);
+    return Array.from(imageData.data);
   }
 
   async getMetadata(source: MediaSource): Promise<{

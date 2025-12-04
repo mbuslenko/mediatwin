@@ -1,4 +1,4 @@
-import type { HashSize, MediaSource } from '../../types';
+import type { AspectRatioMode, HashSize, MediaSource } from '../../types';
 import { bigIntToHex, hashSizeToGridSize, hashSizeToHexLength } from '../../utils/hash-utils';
 import { imageProcessor } from './image-processor';
 import type { HashResult, ImageHasher } from '../types';
@@ -19,16 +19,18 @@ export class AHasher implements ImageHasher {
 
   private readonly size: number;
   private readonly hashBits: HashSize;
+  private readonly aspectRatioMode: AspectRatioMode;
 
-  constructor(hashSize: HashSize = 64) {
+  constructor(hashSize: HashSize = 64, aspectRatioMode: AspectRatioMode = 'stretch') {
     this.hashBits = hashSize;
     this.size = hashSizeToGridSize(hashSize);
+    this.aspectRatioMode = aspectRatioMode;
   }
 
   async compute(source: MediaSource): Promise<HashResult> {
     const startTime = performance.now();
 
-    const pixels = await imageProcessor.getGrayscalePixels(source, this.size);
+    const pixels = await imageProcessor.getGrayscalePixels(source, this.size, this.aspectRatioMode);
 
     const sum = pixels.reduce((acc, val) => acc + val, 0);
     const average = sum / pixels.length;
@@ -49,8 +51,12 @@ export class AHasher implements ImageHasher {
   }
 }
 
-export async function computeAHash(source: MediaSource, hashSize: HashSize = 64): Promise<string> {
-  const hasher = new AHasher(hashSize);
+export async function computeAHash(
+  source: MediaSource,
+  hashSize: HashSize = 64,
+  aspectRatioMode: AspectRatioMode = 'stretch'
+): Promise<string> {
+  const hasher = new AHasher(hashSize, aspectRatioMode);
   const result = await hasher.compute(source);
   return result.hash;
 }
