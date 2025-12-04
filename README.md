@@ -63,14 +63,14 @@ const mt = new MediaTwin({
   redis: 'redis://localhost:6379',
 
   // Optional
-  namespace: 'myapp',              // Key prefix in Redis (default: 'default')
+  namespace: 'myapp',                 // Key prefix in Redis (default: 'default')
   hashAlgorithms: ['phash', 'dhash'], // Which hashes to compute (default: ['phash'])
-  hashSize: 256,                   // Hash size: 64 (default) or 256 for higher accuracy
+  hashSize: 256,                      // Hash size: 64 (default) or 256 for higher accuracy
 
   videoOptions: {
-    frameInterval: 2,              // Extract frame every N seconds (default: 1)
-    maxFrames: 30,                 // Cap on frames to extract (default: 60)
-    enableVHash: true              // Compute video-specific hash (default: false)
+    frameInterval: 2,                 // Extract frame every N seconds (default: 1)
+    maxFrames: 30,                    // Cap on frames to extract (default: 60)
+    enableVHash: true                 // Compute video-specific hash (default: false)
   }
 });
 ```
@@ -87,6 +87,43 @@ You can use one or combine several:
 | `colorHash` | Medium | Color-based similarity (ignores structure) |
 
 Using multiple algorithms and weighted scoring gives better accuracy at the cost of more storage and slightly slower indexing.
+
+### Configurations
+
+Each project requires individual configuration, so take special care when selecting the necessary parameters. For greater accuracy, we recommend an approach with multiple algorithms and weighting each one according to your needs:
+```typescript
+const result = await mt.search({
+    source: './image.jpg',
+    threshold: 130,  // Higher threshold for 256-bit
+    weights: {
+      phash: 0.4,
+      dhash: 0.3,
+      ahash: 0.15,
+      colorHash: 0.15,
+    },
+  });
+```
+
+When using multi-algo approach, you should look on weightedScore field instead of similarity or distance in the response.
+
+### Edge cases
+
+When searching for similar media files, there are many different cases where two images are as similar as possible, but the algorithms still indicate that they are different. Such cases will be covered one after another. As of today, the following issues have been resolved:
+
+1. **Different image proportions**, use aspectRatioMode to handle different aspect ratios of media files. 
+ - 'stretch' (default): Fast, but sensitive to aspect ratio differences
+ - 'crop': Center crops to square - good if subject is always centered
+ - 'pad': Maintains aspect ratio with padding - recommended for mixed
+ aspect ratios
+ 
+ ```typescript
+ const mt = new MediaTwin({
+    redis: 'redis://127.0.0.1:6379',
+    hashAlgorithms: ['phash', 'dhash', 'ahash', 'colorHash'],
+    hashSize: 256,  // Use 256-bit hashes for higher accuracy
+    aspectRatioMode: 'pad',
+  });
+ ```
 
 ## API
 
@@ -239,21 +276,6 @@ const mt = new MediaTwin({
 The `vHash` option creates a single hash representing the entire video (by making a collage of frames and hashing that). Useful for quick video-to-video comparison.
 
 **Note:** Video processing requires FFmpeg. The package bundles `ffmpeg-static` so you don't need to install it separately.
-
-## Performance
-
-Some rough numbers on a MacBook Pro M1:
-
-| Operation | Time |
-|-----------|------|
-| Hash an image | ~15-30ms |
-| Hash a video (30 frames) | ~2-3s |
-| Search 100k index | ~5-15ms |
-| Search 500k index | ~10-25ms |
-
-Memory usage for BK-trees: roughly 100 bytes per entry. So 500k items ≈ 50MB RAM.
-
-The BK-trees are kept in memory for fast search and periodically synced to Redis. On startup, they're rebuilt from Redis.
 
 ## Advanced Usage
 
