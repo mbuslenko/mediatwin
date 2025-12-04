@@ -3,6 +3,8 @@ export { MediaTwin } from './mediatwin';
 export type {
   MediaTwinConfig,
   HashAlgorithm,
+  HashSize,
+  AspectRatioMode,
   VideoOptions,
   HashWeights,
 } from './types/config';
