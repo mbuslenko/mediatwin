@@ -26,6 +26,13 @@
       "default": "./dist/nestjs/index.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "nestjs": [
+        "./dist/nestjs/index.d.ts"
+      ]
+    }
+  },
   "files": [
     "dist"
   ],
