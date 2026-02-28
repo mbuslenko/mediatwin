@@ -1,7 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: ['src/index.ts', 'src/nestjs/index.ts'],
   format: ['esm'],
   dts: true,
   clean: true,
@@ -9,6 +9,6 @@ export default defineConfig({
   splitting: false,
   treeshake: true,
   minify: false,
-  external: ['sharp', 'ffmpeg-static', 'ioredis', 'fluent-ffmpeg'],
+  external: ['sharp', 'ffmpeg-static', 'ioredis', 'fluent-ffmpeg', '@nestjs/common', '@nestjs/core', 'reflect-metadata'],
   target: 'node18',
 });
