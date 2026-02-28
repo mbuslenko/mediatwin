@@ -1,6 +1,6 @@
 {
   "name": "mediatwin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Media similarity detection using perceptual hashing",
   "type": "module",
   "main": "./dist/index.js",
